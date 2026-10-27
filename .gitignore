@@ -6,3 +6,8 @@ playwright-report/
 .env
 .env.*
 !.env.example
+dist-emulator/
+.cache/
+.firebase/
+*-debug.log
+*-debug.log.*

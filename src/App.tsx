@@ -25,6 +25,7 @@ import { useBudgetData } from './hooks/useBudgetData'
 import { usePWA } from './hooks/usePWA'
 import { Modal, Navigation, navItems } from './components/UI'
 import { BudgetForm, TransactionForm } from './components/Forms'
+import { SyncBadge } from './components/Cloud'
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 const Transactions = lazy(() => import('./pages/Transactions'))
 const Budgets = lazy(() => import('./pages/Budgets'))
@@ -43,7 +44,7 @@ interface Confirmation {
   danger: boolean
 }
 export default function App() {
-  const { data, update, replace, error, blocked } = useBudgetData(),
+  const { data, update, replace, error, blocked, cloud } = useBudgetData(),
     pwa = usePWA()
   const [page, setPage] = useState<Page>(getPage),
     [month, setMonth] = useState(currentMonth),
@@ -143,6 +144,7 @@ export default function App() {
             MyBudget<span>.</span>
           </a>
           <div className="topbar-right">
+            <SyncBadge onClick={() => navigate('settings')} />
             <span className="today-label">
               {new Intl.DateTimeFormat('id-ID', {
                 day: 'numeric',
@@ -303,7 +305,7 @@ export default function App() {
             </span>
             <span>
               <ShieldCheck size={13} />
-              Privat di perangkatmu
+              {cloud.user ? 'Cloud pribadi • UID terpisah' : 'Privat di perangkatmu'}
             </span>
           </footer>
         </main>
@@ -322,6 +324,19 @@ export default function App() {
             initial={editing}
             onClose={() => setTransactionModal(false)}
             onSave={(item) => {
+              if (editing) {
+                const current = data.transactions.find((t) => t.id === editing.id)
+                if (!current)
+                  throw new Error(
+                    'Transaksi telah dihapus di perangkat lain. Salin catatan ini sebelum menutup form.',
+                  )
+                const changes = Object.fromEntries(
+                  Object.entries(item).filter(
+                    ([key, value]) => value !== editing[key as keyof Transaction],
+                  ),
+                )
+                item = { ...current, ...changes }
+              }
               update({ ...data, transactions: upsertTransaction(data.transactions, item) })
               setTransactionModal(false)
               if (item.date.slice(0, 7) !== month) selectMonth(item.date.slice(0, 7))
