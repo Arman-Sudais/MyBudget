@@ -19,6 +19,7 @@ import { hasLocalData, migrationConflicts } from '../cloud/model'
 import { downloadFile } from '../lib/data'
 import { localDate } from '../lib/finance'
 import { Modal, PanelHeader } from './UI'
+import { missingFirebaseVariables } from '../cloud/config'
 
 export function SyncBadge({ onClick }: { onClick: () => void }) {
   const { cloud } = useBudgetContext(),
@@ -72,6 +73,26 @@ export function CloudPanel() {
               Mode lokal tetap aktif. Sinkronisasi belum dikonfigurasi untuk deployment ini. Ikuti
               panduan Firebase pada dokumentasi proyek, lalu isi konfigurasi publik Firebase di
               Vercel dan deploy ulang.
+            </p>
+          </div>
+          <div className="firebase-configuration-help">
+            <strong>Variabel yang belum terisi pada build ini:</strong>
+            <ul>
+              {missingFirebaseVariables.map((name) => (
+                <li key={name}>
+                  <code>{name}</code>
+                </li>
+              ))}
+            </ul>
+            <p>
+              Isi di Vercel → Settings → Environment Variables, pilih Production (dan Preview jika
+              digunakan), lalu Redeploy. Nilai tersedia di Firebase Console → Project settings →
+              Your apps → aplikasi Web → SDK setup and configuration → Config.
+            </p>
+            <p>
+              Project ID saja belum cukup untuk mengaktifkan login. Untuk penggunaan lokal, isi file{' '}
+              <code>.env.local</code> dari template <code>.env.example</code>, lalu jalankan ulang
+              server.
             </p>
           </div>
           <p className="footnote">

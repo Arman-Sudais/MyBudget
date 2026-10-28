@@ -4,6 +4,20 @@ Upgrade ini memakai Firebase Authentication (Google) dan Cloud Firestore. Kamu t
 
 Sebelum mulai, buka **Pengaturan → Backup JSON** pada laptop dan Android yang sudah memiliki data. Simpan file itu secara pribadi. Data lokal tidak otomatis dihapus atau diunggah oleh upgrade ini.
 
+## Jika project, Google Sign-In, Firestore, dan rules sudah selesai
+
+Kamu dapat langsung melanjutkan konfigurasi deployment; tidak perlu membuat project atau database baru.
+
+1. Pastikan branch `feat/firebase-sync` sudah digabungkan ke `main`, atau Vercel memang men-deploy branch yang memuat upgrade. Versi `main` sebelum merge tidak menampilkan fitur cloud.
+2. Buka project yang sudah dibuat di **Firebase Console → roda gigi → Project settings → General → Your apps → aplikasi Web → SDK setup and configuration → Config**.
+3. Ambil `apiKey`, `authDomain`, `projectId`, dan `appId` dari objek `firebaseConfig`. Jangan mengambil konfigurasi dari Service accounts. Nilai Project ID saja belum cukup untuk mengaktifkan SDK.
+4. Masukkan ke **Vercel → project MyBudget → Settings → Environment Variables** menggunakan tabel pada langkah 5 di bawah. Pilih **Production**, dan **Preview** jika dipakai. Nilai cukup dimasukkan di panel Vercel; jangan membuat commit berisi objek `firebaseConfig` atau `.env.local`.
+5. Tambahkan hostname aplikasi yang sebenarnya ke **Firebase Authentication → Settings → Authorized domains**. Gunakan nama domain saja, tanpa `https://` dan tanpa path.
+6. Jalankan **Vercel → Deployments → Redeploy**. Vite membaca variabel ketika build, sehingga deployment lama tidak otomatis memakai nilai baru. Buka Pengaturan MyBudget untuk melihat nama variabel yang masih kurang pada build tersebut.
+7. Pastikan rules yang sudah dipublikasikan sama dengan file `firestore.rules` terbaru dari branch upgrade; rules aplikasi ini juga memvalidasi receipt operasi dan alokasi anggaran. Login pada laptop dan Android memakai akun Google yang sama, pilih migrasi dengan konfirmasi, lalu tunggu **Synced**.
+
+Untuk pengembangan lokal, isi nilai pada `.env.local` yang diabaikan Git, lalu mulai ulang development server. File lokal ini tidak ikut dikirim ke Vercel; tetap isi variabel Vercel secara terpisah. Jangan memasukkan password Google atau private key. Pengujian emulator memakai project demo dan tidak mengubah database project pribadi.
+
 ## 1. Buat project Firebase dan daftarkan aplikasi web
 
 1. Buka [Firebase Console](https://console.firebase.google.com/) dan masuk menggunakan akun Google milikmu.

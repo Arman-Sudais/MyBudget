@@ -3267,3 +3267,27 @@ strong {
     font-size: 9px !important;
   }
 }
+
+.firebase-configuration-help {
+  padding: 16px;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  font-size: 11px;
+  line-height: 1.9;
+  overflow-wrap: anywhere;
+}
+.firebase-configuration-help strong {
+  font-size: 12px;
+}
+.firebase-configuration-help ul {
+  padding-left: 20px;
+  list-style: disc;
+  margin: 10px 0;
+}
+.firebase-configuration-help p + p {
+  margin-top: 10px;
+}
+.firebase-configuration-help code {
+  font-size: 10px;
+}
