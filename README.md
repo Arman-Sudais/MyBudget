@@ -1,6 +1,8 @@
 # MyBudget
 
-Aplikasi personal budgeting untuk mahasiswa, dibangun dengan **React + TypeScript + Vite + Tailwind CSS + Lucide React + Recharts**. MyBudget merupakan PWA yang dapat dipasang di Android dan digunakan offline setelah application shell tersimpan. Tanpa backend, autentikasi, atau database cloud.
+Aplikasi personal budgeting untuk mahasiswa, dibangun dengan **React + TypeScript + Vite + Tailwind CSS + Lucide React + Recharts**. MyBudget merupakan PWA yang dapat dipasang di Android dan digunakan offline setelah application shell tersimpan. Mode lokal tetap tersedia; **Firebase Authentication + Google Sign-In + Cloud Firestore** menambahkan sinkronisasi akun opsional antara laptop dan Android.
+
+Untuk mengaktifkan cloud, ikuti **[Panduan Firebase berbahasa Indonesia](docs/FIREBASE_SETUP_ID.md)**: membuat project, mengaktifkan Google, memasang Security Rules, mengisi environment variables Vercel, authorized domains, deployment, migrasi, dan pengujian dua perangkat. Konfigurasi web publik dicontohkan pada `.env.example`; tidak ada Admin private key di frontend.
 
 ## Menjalankan aplikasi
 
@@ -53,6 +55,8 @@ Preview menggunakan port 4173 secara default. HTTP `localhost` merupakan secure 
 - Anggaran total dan alokasi kategori yang terpisah untuk setiap bulan; indikator aman, mendekati batas (≥80%), atau berlebih. Total alokasi tidak dapat melebihi anggaran total.
 - Donut chart kategori, bar chart enam bulan, peringkat pengeluaran, rata-rata harian, dan perbandingan bulan sebelumnya. Seluruh angka berasal dari transaksi; **tidak ada data dummy**.
 - Penyimpanan localStorage, sinkronisasi perubahan antartab pada origin yang sama, dark mode persisten, empty states, dan notifikasi hasil penyimpanan.
+- Login Google opsional, data terpisah per UID, listener realtime per koleksi/dokumen, serta indikator Synced / Syncing / Offline / Sync Error. Perubahan dikirim per entitas/field dan antrean diakui menggunakan receipt idempotent.
+- Pilihan migrasi setelah login, merge dengan prioritas eksplisit untuk ID yang bertabrakan, dan cache offline persisten hanya setelah izin perangkat pribadi. Data lokal asli tidak ditimpa ketika cloud aktif; logout menolak antrean yang belum selesai.
 - Ekspor CSV hasil filter atau seluruh transaksi; backup/restore JSON dengan validasi skema dan konfirmasi penggantian; konfirmasi sebelum reset data.
 - Sidebar desktop, bottom navigation mobile, tombol (+) cepat, input nominal dengan numeric keypad, serta dialog yang mendukung keyboard dan Escape.
 - Manifest lengkap, ikon 192/512 px dan maskable, cache seluruh application shell termasuk halaman lazy-loaded, indikator offline, dan prompt pembaruan service worker.
@@ -95,16 +99,18 @@ npm run typecheck        # pemeriksaan TypeScript
 npm run build            # pemeriksaan TypeScript + produksi + service worker
 npx playwright install chromium  # sekali jika Chromium belum tersedia
 npm run test:e2e         # desktop Chromium + emulasi Pixel 7
+npm run test:sync        # Auth + Firestore Emulator, Security Rules dan E2E cloud; Java 21+
 ```
 
 Playwright otomatis memakai `/usr/bin/chromium` bila tersedia, atau browser bawaan Playwright. Override dengan `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` jika perlu. E2E menjalankan production preview pada port 4173 dan mencakup CRUD, pencarian/filter, perubahan anggaran, CSV, JSON backup/restore, pemulihan data rusak, persistensi, dark mode, tampilan 320–1280 px, manifest, pemeriksaan installability Chromium, serta pencatatan dan reload offline. Emulasi Android tidak menggantikan uji pemasangan manual pada perangkat fisik.
 
-CI GitHub Actions menjalankan unit tests, build, dan browser tests. Untuk meregenerasi ikon dari `public/icon.svg`, gunakan `npm run icons`.
+CI GitHub Actions menjalankan unit tests, build, browser tests, dan pengujian cloud pada emulator demo. `npm test` mencakup simulasi kontrak SDK untuk controller sinkronisasi; itu tidak menggantikan tes rules di emulator asli. Unduhan emulator resmi memerlukan `storage.googleapis.com` dan tetap memverifikasi checksum. Untuk meregenerasi ikon dari `public/icon.svg`, gunakan `npm run icons`.
 
 ## Struktur source
 
 ```text
 src/
+  cloud/          # Firebase modular, migrasi/merge, cache per UID, antrean dan controller
   components/     # Navigation, SummaryCard, TransactionList, BudgetProgress,
                   # TransactionForm, BudgetForm, CategoryChart, MonthlyChart, Modal
   hooks/          # penyimpanan persisten dan lifecycle PWA
@@ -116,10 +122,12 @@ src/
 public/           # ikon, aturan deployment, aset statis
 tests/            # skenario E2E Playwright
 scripts/          # regenerasi ikon
+docs/             # panduan konfigurasi Firebase dan sinkronisasi untuk pemula
+firestore.rules   # validasi UID, transaksi, kategori, anggaran dan receipt operasi
 ```
 
 ## Batasan data lokal
 
-Data hanya tersimpan pada browser dan origin yang digunakan, tanpa sinkronisasi antarperangkat atau enkripsi aplikasi. Penghapusan data browser, kehilangan perangkat, dan mode samaran dapat menghilangkan catatan. **Backup JSON secara rutin**, simpan file secara pribadi, dan unduh backup sebelum restore/reset. CSV hanya berisi transaksi dan tidak menggantikan backup JSON.
+Pada **mode lokal**, data hanya tersimpan pada browser dan origin yang digunakan, tanpa sinkronisasi antarperangkat atau enkripsi aplikasi. Pada **mode cloud**, data akun tersimpan di Firestore di bawah UID pemilik dan perubahan tertunda berada di perangkat sampai server mengakuinya. Perangkat pribadi dapat menggunakan cache Firestore dan antrean persisten; perangkat bersama memakai cache memori dan antrean sementara per tab. Data lokal lama tetap terpisah. Penghapusan data browser ketika ada antrean belum terkirim dapat menghilangkan perubahan itu. **Backup JSON secara rutin**, simpan file secara pribadi, dan unduh backup sebelum restore/reset. CSV hanya berisi transaksi dan tidak menggantikan backup JSON.
 
-Kegagalan baca/validasi tidak menimpa data asli. Pengaturan menyediakan unduhan data mentah untuk pemulihan. Kegagalan tulis menampilkan error dan tidak dianggap berhasil. Untuk versi lanjutan, penyimpanan dapat dipindahkan ke IndexedDB, ditambah migrasi skema, transaksi berulang, dan sinkronisasi opsional dengan kontrol pengguna.
+Kegagalan baca/validasi tidak menimpa data asli. Pengaturan menyediakan unduhan data mentah untuk pemulihan. Kegagalan tulis menampilkan error dan tidak dianggap berhasil. Konflik field sama mengikuti penulisan server terakhir; field berbeda digabungkan. Tombstone mencegah edit lama menghidupkan kembali data yang sudah dihapus. Penolakan rules/konflik anggaran mempertahankan antrean dan ditampilkan sebagai Sync Error. Detail pemulihan dan batasan cache/akun ada pada panduan Firebase. Pengembangan selanjutnya dapat mencakup transaksi berulang dan riwayat revisi yang dapat ditinjau pengguna.

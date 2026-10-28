@@ -1,0 +1,113 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function owner(uid) { return request.auth != null && request.auth.uid == uid; }
+    function safeId(id) { return id is string && id.matches('^[A-Za-z0-9_-]{1,100}$') && !id.matches('^__.*__$') && !(id in ['constructor','prototype']); }
+    function money(value) { return value is int && value >= 0 && value <= 1000000000000; }
+    function month(value) { return value.matches('^(19[0-9]{2}|20[0-9]{2}|2100)-(0[1-9]|1[0-2])$'); }
+    function calendarDate(value) {
+      let y = int(value.split('-')[0]);
+      let m = int(value.split('-')[1]);
+      let day = int(value.split('-')[2]);
+      let leap = y % 4 == 0 && (y % 100 != 0 || y % 400 == 0);
+      let maxDay = m == 2 ? (leap ? 29 : 28) : (m in [4,6,9,11] ? 30 : 31);
+      return y >= 1900 && y <= 2100 && m >= 1 && m <= 12 && day >= 1 && day <= maxDay;
+    }
+    function validDate(value) {
+      return value is string && value.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$') && calendarDate(value);
+    }
+    function metadata(uid, entity, key) {
+      let d = request.resource.data;
+      let receipt = getAfter(/databases/$(database)/documents/users/$(uid)/mutations/$(d.mutationId)).data;
+      return d.schemaVersion == 1 && d.updatedAt == request.time
+        && d.createdAt is timestamp && d.deleted is bool
+        && safeId(d.deviceId) && safeId(d.mutationId)
+        && d.revision is int && d.revision >= 1
+        && receipt.entity == entity && receipt.key == key && receipt.deviceId == d.deviceId
+        && receipt.updatedAt == request.time;
+    }
+    function creation() { return request.resource.data.revision == 1 && request.resource.data.createdAt == request.time && !request.resource.data.deleted; }
+    function revision() { return request.resource.data.revision == resource.data.revision + 1 && request.resource.data.createdAt == resource.data.createdAt; }
+    function keys(fields) { return request.resource.data.keys().hasOnly(fields.concat(['schemaVersion','updatedAt','createdAt','deleted','revision','deviceId','mutationId'])); }
+    function category(uid,id,type) {
+      let c=getAfter(/databases/$(database)/documents/users/$(uid)/categories/$(id)).data;
+      return !c.deleted && c.type==type;
+    }
+    function transactionData(uid,id) {
+      let d=request.resource.data;
+      return keys(['id','type','amount','categoryId','date','note'])
+        && d.id==id && safeId(id) && d.type in ['income','expense']
+        && money(d.amount) && d.amount>0 && safeId(d.categoryId)
+        && validDate(d.date) && d.note is string && d.note.size()<=200
+        && (d.deleted || category(uid,d.categoryId,d.type));
+    }
+    function categoryData(id) {
+      let d=request.resource.data;
+      return keys(['id','name','type','icon','color']) && d.id==id && safeId(id)
+        && d.name is string && d.name.size()>0 && d.name.size()<=50
+        && d.type in ['income','expense'] && d.icon is string && d.icon.size()<=30
+        && d.color is string && d.color.matches('^#[0-9a-fA-F]{6}$');
+    }
+    function budgetData(id) {
+      let d=request.resource.data;
+      return month(id) && keys(['total','limits','allocated','changedCategory'])
+        && money(d.total) && money(d.allocated) && d.allocated<=d.total
+        && d.limits is map && d.limits.size()<=200 && d.changedCategory is string
+        && (!d.deleted || (d.allocated==0 && d.total==0));
+    }
+    function categoryLimitChange(uid) {
+      let d=request.resource.data;
+      let old=resource.data;
+      let key=d.changedCategory;
+      let value=d.limits.get(key,0);
+      return safeId(key) && d.limits.diff(old.limits).affectedKeys().hasOnly([key])
+        && money(value)
+        && d.total==old.total
+        && d.allocated==old.allocated + value - old.limits.get(key,0)
+        && (value==0 || category(uid,key,'expense'));
+    }
+    function budgetChange(uid) {
+      let d=request.resource.data;
+      return d.changedCategory=='' ? d.limits==resource.data.limits && d.allocated==resource.data.allocated : categoryLimitChange(uid);
+    }
+    match /users/{uid}/transactions/{id} {
+      allow read: if owner(uid);
+      allow create: if owner(uid) && metadata(uid,'transactions',id) && creation() && transactionData(uid,id);
+      allow update: if owner(uid) && metadata(uid,'transactions',id) && revision() && transactionData(uid,id);
+      allow delete: if false;
+    }
+    match /users/{uid}/categories/{id} {
+      allow read: if owner(uid);
+      allow create: if owner(uid) && metadata(uid,'categories',id) && creation() && categoryData(id);
+      allow update: if owner(uid) && metadata(uid,'categories',id) && revision() && categoryData(id) && request.resource.data.type==resource.data.type;
+      allow delete: if false;
+    }
+    match /users/{uid}/budgets/{id} {
+      allow read: if owner(uid);
+      allow create: if owner(uid) && metadata(uid,'budgets',id) && creation() && budgetData(id)
+        && request.resource.data.limits=={} && request.resource.data.allocated==0 && request.resource.data.changedCategory=='';
+      allow update: if owner(uid) && metadata(uid,'budgets',id) && revision() && budgetData(id) && budgetChange(uid);
+      allow delete: if false;
+    }
+    match /users/{uid}/settings/preferences {
+      function preferenceData() {
+        let d=request.resource.data;
+        return keys(['name','theme']) && d.name is string && d.name.size()<=60 && d.theme in ['light','dark'];
+      }
+      allow read: if owner(uid);
+      allow create: if owner(uid) && metadata(uid,'settings','preferences') && creation() && preferenceData();
+      allow update: if owner(uid) && metadata(uid,'settings','preferences') && revision() && preferenceData();
+      allow delete: if false;
+    }
+    match /users/{uid}/mutations/{id} {
+      allow read: if owner(uid);
+      allow create: if owner(uid) && safeId(id)
+        && request.resource.data.keys().hasOnly(['schemaVersion','entity','key','deviceId','updatedAt'])
+        && request.resource.data.schemaVersion==1 && request.resource.data.updatedAt==request.time
+        && request.resource.data.entity in ['transactions','categories','budgets','settings']
+        && safeId(request.resource.data.key) && safeId(request.resource.data.deviceId);
+      allow update,delete: if false;
+    }
+    match /{document=**} { allow read,write: if false; }
+  }
+}

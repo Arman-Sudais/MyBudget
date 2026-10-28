@@ -3016,3 +3016,278 @@ strong {
     grid-template-columns: minmax(80px, 1fr) minmax(84px, 0.6fr) 44px;
   }
 }
+
+/* Optional cloud account surfaces reuse the existing budgeting layout. */
+.sync-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  background: var(--green-soft);
+  color: var(--green);
+  border-radius: 20px;
+  min-height: 34px;
+  padding: 7px 11px;
+  font-size: 10px;
+  white-space: nowrap;
+}
+.sync-badge small {
+  border-radius: 50%;
+  min-width: 17px;
+  padding: 2px;
+  background: var(--surface);
+  font-size: 9px;
+}
+.sync-badge.sync-error {
+  background: #c4776915;
+  color: var(--danger);
+}
+.cloud-panel {
+  margin-bottom: 22px;
+}
+.cloud-panel .info-callout {
+  margin-bottom: 13px;
+}
+.cloud-intro,
+.cloud-account {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 21px;
+}
+.cloud-intro p {
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--muted);
+  max-width: 540px;
+}
+.cloud-account strong {
+  font-size: 13px;
+  display: block;
+}
+.cloud-account small {
+  font-size: 10px;
+  line-height: 1.7;
+  display: block;
+  color: var(--muted);
+  margin-top: 3px;
+}
+.trusted-device {
+  display: flex;
+  gap: 11px;
+  align-items: flex-start;
+  font-size: 12px;
+  line-height: 1.7;
+  padding: 15px;
+  background: var(--surface-soft);
+  border-radius: 9px;
+  max-width: 670px;
+}
+.trusted-device input {
+  width: 19px;
+  height: 19px;
+  margin-top: 2px;
+  accent-color: var(--green);
+  flex-shrink: 0;
+}
+.trusted-device small {
+  display: block;
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.cloud-status-line {
+  display: flex;
+  gap: 17px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 13px 15px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  font-size: 11px;
+}
+.cloud-status-line strong {
+  color: var(--green);
+}
+.cloud-status-line span,
+.cloud-status-line small {
+  color: var(--muted);
+}
+.pending-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px;
+  background: var(--surface-soft);
+  border-radius: 9px;
+}
+.pending-actions p {
+  width: 100%;
+  font-size: 11px;
+  line-height: 1.8;
+  color: var(--muted);
+}
+.transaction-pending {
+  display: inline-flex;
+  margin-top: 4px;
+  font-size: 8px !important;
+  padding: 3px 6px;
+  background: #dca14719;
+  color: #a77c36;
+  border-radius: 4px;
+}
+.cloud-gate {
+  max-width: 800px;
+  margin: 45px auto;
+  padding: 22px;
+  min-height: 70dvh;
+}
+.cloud-gate > .brand {
+  margin-bottom: 35px;
+  justify-content: center;
+}
+.cloud-loading {
+  text-align: center;
+  margin-bottom: 25px;
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.8;
+}
+.cloud-gate > .footnote {
+  text-align: center;
+}
+.migration-page h1 {
+  font-size: 26px;
+  letter-spacing: -0.6px;
+  margin: 13px 0;
+}
+.migration-page .form-description {
+  margin: 17px 0;
+}
+.migration-counts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin: 20px 0;
+}
+.migration-counts > div {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.migration-counts small {
+  font-size: 9px;
+  letter-spacing: 0.7px;
+  color: var(--muted);
+}
+.migration-counts strong {
+  font-size: 19px;
+}
+.migration-counts span {
+  font-size: 11px;
+  color: var(--muted);
+}
+.migration-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 23px 0;
+}
+.migration-options .button {
+  white-space: normal;
+  line-height: 1.7;
+}
+.cloud-gate .settings-panel {
+  overflow: visible;
+}
+@media (max-width: 650px) {
+  .sync-badge {
+    font-size: 9px;
+    min-height: 38px;
+    padding: 7px 9px;
+    gap: 5px;
+  }
+  .sync-badge small {
+    font-size: 8px;
+  }
+  .cloud-gate {
+    margin: 10px auto;
+    padding: 18px 13px;
+  }
+  .cloud-account strong {
+    font-size: 12px;
+  }
+  .cloud-account small {
+    font-size: 10px;
+    overflow-wrap: anywhere;
+  }
+  .cloud-account > div {
+    min-width: 0;
+  }
+  .trusted-device {
+    font-size: 12px;
+    padding: 13px;
+  }
+  .migration-page h1 {
+    font-size: 25px;
+  }
+  .migration-counts {
+    gap: 9px;
+  }
+  .migration-counts > div {
+    padding: 15px 12px;
+  }
+  .migration-counts strong {
+    font-size: 17px;
+  }
+  .migration-counts small {
+    font-size: 8px;
+  }
+  .migration-options {
+    flex-direction: column;
+  }
+  .migration-options .button {
+    min-height: 45px;
+  }
+  .cloud-status-line {
+    gap: 11px;
+  }
+  .cloud-panel .settings-actions .button {
+    min-height: 44px;
+  }
+  .pending-actions > .text-button {
+    min-height: 44px;
+  }
+  .transaction-pending {
+    font-size: 9px !important;
+  }
+}
+
+.firebase-configuration-help {
+  padding: 16px;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  font-size: 11px;
+  line-height: 1.9;
+  overflow-wrap: anywhere;
+}
+.firebase-configuration-help strong {
+  font-size: 12px;
+}
+.firebase-configuration-help ul {
+  padding-left: 20px;
+  list-style: disc;
+  margin: 10px 0;
+}
+.firebase-configuration-help p + p {
+  margin-top: 10px;
+}
+.firebase-configuration-help code {
+  font-size: 10px;
+}

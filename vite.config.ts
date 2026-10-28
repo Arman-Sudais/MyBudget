@@ -2,8 +2,26 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
+import { resolve } from 'node:path'
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
+  ...(mode === 'emulator'
+    ? {
+        build: {
+          rolldownOptions: {
+            preserveEntrySignatures: 'strict',
+            input: {
+              app: resolve('index.html'),
+              'test-auth': resolve('tests/cloud/auth-helper.ts'),
+            },
+            output: {
+              entryFileNames: (chunk) =>
+                chunk.name === 'test-auth' ? 'test-auth.js' : 'assets/[name]-[hash].js',
+            },
+          },
+        },
+      }
+    : {}),
   // Keep the forwarded preview port stable; Vite must not silently switch ports.
   server: { host: '0.0.0.0', port: 5173, strictPort: true },
   preview: { host: '0.0.0.0', port: 4173, strictPort: true },
@@ -44,4 +62,4 @@ export default defineConfig({
       },
     }),
   ],
-})
+}))

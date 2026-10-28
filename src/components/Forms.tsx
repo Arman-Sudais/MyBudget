@@ -3,6 +3,7 @@ import { ArrowDownLeft, ArrowUpRight, Check, Info } from 'lucide-react'
 import type { AppData, Budget, Transaction, TransactionType } from '../types'
 import { emptyBudget, localDate, MAX_AMOUNT, money, monthLabel } from '../lib/finance'
 import { validDate } from '../lib/data'
+import { mergeBudgetEdit } from '../cloud/model'
 
 export function TransactionForm({
   data,
@@ -163,6 +164,7 @@ export function BudgetForm({
   onClose: () => void
 }) {
   const current = data.budgets[month] ?? emptyBudget()
+  const [baseline] = useState(current)
   const [total, setTotal] = useState(String(current.total || ''))
   const [limits, setLimits] = useState<Record<string, string>>(
     Object.fromEntries(Object.entries(current.limits).map(([key, value]) => [key, String(value)])),
@@ -179,10 +181,12 @@ export function BudgetForm({
         if (allocated > Number(total))
           return setError('Total alokasi kategori tidak boleh melebihi anggaran bulanan.')
         try {
-          onSave({
-            total: Number(total),
-            limits: Object.fromEntries(Object.entries(limits).map(([id, v]) => [id, Number(v)])),
-          })
+          onSave(
+            mergeBudgetEdit(current, baseline, {
+              total: Number(total),
+              limits: Object.fromEntries(Object.entries(limits).map(([id, v]) => [id, Number(v)])),
+            }),
+          )
         } catch (err) {
           setError(err instanceof Error ? err.message : 'Gagal menyimpan anggaran.')
         }

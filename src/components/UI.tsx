@@ -34,6 +34,7 @@ import { useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
 import type { Category, Page, Transaction } from '../types'
 import { budgetStatus, dateLabel, money } from '../lib/finance'
+import { useBudgetData } from '../hooks/useBudgetData'
 
 const icons: Record<string, typeof Wallet> = {
   wallet: Wallet,
@@ -50,7 +51,8 @@ const icons: Record<string, typeof Wallet> = {
   grid: Grid2X2,
 }
 export function CategoryIcon({ category }: { category?: Category }) {
-  const Icon = icons[category?.icon ?? 'grid'] ?? Grid2X2
+  const key = category?.icon ?? 'grid'
+  const Icon = Object.hasOwn(icons, key) ? icons[key] : Grid2X2
   return (
     <span
       className="category-icon"
@@ -82,6 +84,7 @@ export function Navigation({
   dark: boolean
   onTheme: () => void
 }) {
+  const { cloud } = useBudgetData()
   return (
     <>
       <aside className="sidebar">
@@ -128,7 +131,7 @@ export function Navigation({
           <strong>Uangmu, kendalimu.</strong>
           <p>Langkah kecil hari ini, kebebasan finansial esok hari.</p>
           <span className="private-label">
-            <span /> Tersimpan di perangkatmu
+            <span /> {cloud.user ? 'Tersinkron ke akun pribadi' : 'Tersimpan di perangkatmu'}
           </span>
         </div>
         <div className="sidebar-bottom">
@@ -334,6 +337,8 @@ export function TransactionList({
   onAdd: () => void
   full?: boolean
 }) {
+  const { cloud } = useBudgetData()
+  const pendingIds = cloud.state?.pendingTransactionIds ?? []
   if (!transactions.length)
     return (
       <EmptyState
@@ -359,6 +364,7 @@ export function TransactionList({
               <CategoryIcon category={c} />
               <div>
                 <strong>{t.note || c?.name || 'Transaksi'}</strong>
+                {pendingIds.includes(t.id) && <span className="transaction-pending">Tertunda</span>}
                 <small>
                   {c?.name}
                   <span className="mobile-date"> · {dateLabel(t.date)}</span>

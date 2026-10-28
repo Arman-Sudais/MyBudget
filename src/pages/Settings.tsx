@@ -19,6 +19,8 @@ import { initialData, localDate } from '../lib/finance'
 import { STORAGE_KEY } from '../hooks/useBudgetData'
 import { CategoryIcon, PanelHeader } from '../components/UI'
 import type { usePWA } from '../hooks/usePWA'
+import { CloudPanel } from '../components/Cloud'
+import { useBudgetData } from '../hooks/useBudgetData'
 
 type Confirm = (title: string, message: string, action: () => void, danger?: boolean) => void
 export default function Settings({
@@ -38,6 +40,7 @@ export default function Settings({
   pwa: ReturnType<typeof usePWA>
   blocked: boolean
 }) {
+  const { cloud } = useBudgetData()
   const [name, setName] = useState(data.name),
     [categoryName, setCategoryName] = useState(''),
     [categoryType, setCategoryType] = useState<TransactionType>('expense'),
@@ -74,9 +77,10 @@ export default function Settings({
         </div>
         <span className="date-chip">
           <ShieldCheck size={17} />
-          Tanpa akun. Tetap personal.
+          {cloud.user ? 'Akun pribadi. Data terpisah.' : 'Mode lokal. Akun opsional.'}
         </span>
       </div>
+      <CloudPanel />
       {error && (
         <p className="form-error" role="alert">
           {error}
@@ -290,9 +294,10 @@ export default function Settings({
           <div className="privacy-note">
             <HardDrive size={19} />
             <p>
-              Data disimpan di localStorage browser ini, tanpa server dan sinkronisasi. Menghapus
-              data browser, mengganti perangkat, atau memakai mode samaran dapat menghilangkan
-              catatan. Backup file JSON secara rutin; file ini berisi informasi keuangan pribadi.
+              {cloud.user
+                ? 'Backup ini berisi data akun cloud yang sedang ditampilkan, termasuk perubahan tertunda yang terlihat. Restore akan mengubah akun cloud setelah konfirmasi dan dikirim saat online. Salinan lokal lama tetap terpisah.'
+                : 'Data mode lokal disimpan di localStorage browser ini. Menghapus data browser atau memakai mode samaran dapat menghilangkan catatan.'}{' '}
+              Backup JSON secara rutin; file ini berisi informasi keuangan pribadi.
             </p>
           </div>
         </section>
@@ -307,7 +312,7 @@ export default function Settings({
           </div>
           <p className="about-copy">
             Dibuat untuk membantu kamu mengelola uang saku, pengeluaran harian, dan anggaran
-            bulanan. Tanpa iklan, tanpa login, tanpa kerumitan.
+            bulanan. Tanpa iklan, dengan login Google opsional untuk sinkronisasi.
           </p>
           <div className="about-features">
             <span>
@@ -413,15 +418,21 @@ export default function Settings({
       </section>
       <section className="panel danger-zone">
         <div>
-          <h2>Hapus seluruh data</h2>
-          <p>Hapus semua transaksi dan anggaran. Kategori kembali ke bawaan.</p>
+          <h2>{cloud.user ? 'Hapus data akun cloud' : 'Hapus seluruh data'}</h2>
+          <p>
+            Hapus semua transaksi dan anggaran. Kategori kembali ke bawaan.
+            {cloud.user &&
+              ' Perubahan berlaku pada semua perangkat akun ini; salinan lokal lama tetap ada.'}
+          </p>
         </div>
         <button
           className="button button-danger"
           onClick={() =>
             confirm(
               'Hapus seluruh data?',
-              'Seluruh transaksi, anggaran, dan kategori kustom akan dihapus dari browser ini. Tindakan ini tidak dapat dibatalkan. Pastikan kamu sudah memiliki backup.',
+              cloud.user
+                ? 'Transaksi, anggaran, dan kategori kustom akun cloud akan dihapus pada semua perangkat setelah sinkronisasi. Salinan lokal lama tidak dihapus. Pastikan kamu sudah memiliki backup.'
+                : 'Seluruh transaksi, anggaran, dan kategori kustom akan dihapus dari browser ini. Tindakan ini tidak dapat dibatalkan. Pastikan kamu sudah memiliki backup.',
               () =>
                 attempt(() => {
                   replace({ ...initialData(), theme: data.theme })
