@@ -26,7 +26,7 @@ import {
 import type { Firestore } from 'firebase/firestore'
 import { firebaseConfig, useEmulators } from './config'
 
-const app = getApps().find((a) => a.name === '[DEFAULT]') ?? initializeApp(firebaseConfig)
+export const app = getApps().find((a) => a.name === '[DEFAULT]') ?? initializeApp(firebaseConfig)
 export const auth = useEmulators
   ? initializeAuth(app, { persistence: [browserLocalPersistence, browserSessionPersistence] })
   : getAuth(app)

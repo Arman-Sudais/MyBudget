@@ -18,6 +18,7 @@ import {
 } from '../lib/finance'
 import { CategoryChart, MonthlyChart } from '../components/Charts'
 import { CategoryIcon, EmptyState, PanelHeader, SummaryCard } from '../components/UI'
+import AIInsights from '../components/AIInsights'
 
 export default function Analytics({ data, month }: { data: AppData; month: string }) {
   const tx = monthTransactions(data.transactions, month),
@@ -64,6 +65,7 @@ export default function Analytics({ data, month }: { data: AppData; month: strin
           detail={`Dibagi ${days} hari kalender bulan ini`}
         />
       </div>
+      <AIInsights data={data} month={month} />
       <div className="dashboard-charts">
         <section className="panel">
           <PanelHeader
