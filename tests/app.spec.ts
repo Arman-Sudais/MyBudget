@@ -231,6 +231,15 @@ pwaTest(
     await addTransaction(page, 'expense', '17000', 'Transaksi tanpa internet', await today(page))
     await navigate(page, 'Transaksi')
     await expect(page.getByText('Transaksi tanpa internet', { exact: true })).toBeVisible()
+    await navigate(page, 'Analisis')
+    const insights = page.getByRole('region', { name: 'AI Insights', exact: true })
+    await expect(
+      insights.getByText('Analisis otomatis · di perangkat', { exact: true }),
+    ).toBeVisible()
+    await expect(insights).toContainText('17.000')
+    await expect(
+      insights.getByRole('button', { name: 'Analisis dengan AI', exact: true }),
+    ).toBeDisabled()
     await settings(page)
     await expect(page.getByText('Siap digunakan offline', { exact: true })).toBeVisible()
     await page.reload()
@@ -260,6 +269,48 @@ test('data rusak tidak ditimpa dan bisa dipulihkan secara eksplisit', async ({ p
   await page.getByRole('button', { name: 'Hapus data', exact: true }).click()
   await page.getByRole('button', { name: 'Ya, hapus', exact: true }).click()
   expect((await stored(page)).transactions).toEqual([])
+})
+
+test('AI Insights: agregat lokal, tidak mengirim otomatis, pembaruan setelah edit dan layout mobile', async ({
+  page,
+}) => {
+  const errors: string[] = [],
+    calls: string[] = []
+  page.on('pageerror', (e) => errors.push(e.message))
+  page.on('request', (request) => {
+    if (/firebasevertexai|generativelanguage|recaptcha|appcheck/.test(request.url()))
+      calls.push(request.url())
+  })
+  await page.goto('/')
+  await addTransaction(page, 'income', '1000000', 'Uang saku', '2026-01-01')
+  await addTransaction(page, 'expense', '25000', 'Makan pribadi', '2026-01-03')
+  await navigate(page, 'Analisis')
+  const insights = page.getByRole('region', { name: 'AI Insights', exact: true })
+  await expect(insights).toContainText('25.000')
+  await expect(insights).toContainText('1.000.000')
+  await expect(insights).toContainText('Data masih sedikit')
+  await expect(
+    insights.getByRole('button', { name: 'Analisis dengan AI', exact: true }),
+  ).toBeDisabled()
+  expect(calls).toEqual([])
+  await navigate(page, 'Transaksi')
+  await page.getByRole('button', { name: 'Edit Makan pribadi', exact: true }).click()
+  await page.getByLabel('Nominal transaksi').fill('40000')
+  await page.getByRole('button', { name: 'Simpan perubahan', exact: true }).click()
+  await navigate(page, 'Analisis')
+  await expect(insights).toContainText('40.000')
+  expect((await stored(page)).transactions).toHaveLength(2)
+  await page.setViewportSize({ width: 320, height: 850 })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.screenshot({
+    path: `/tmp/mybudget-insights-${test.info().project.name}.png`,
+    fullPage: true,
+  })
+  await page.reload()
+  await page.getByLabel('Bulan terpilih').fill('2026-01')
+  await expect(insights).toContainText('40.000')
+  expect(calls).toEqual([])
+  expect(errors).toEqual([])
 })
 
 test('responsif tanpa overflow pada semua halaman dan formulir', async ({ page }) => {
