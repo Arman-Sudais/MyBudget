@@ -24,31 +24,42 @@ Daftar model, tanggal penghentian, wilayah, kuota, dan ketentuan Free Tier dapat
 
 `VITE_FIREBASE_AI_FREE_TIER_CONFIRMED=true` adalah pernyataan bahwa pemilik deployment sudah melakukan pemeriksaan ini. Variabel tersebut **tidak dapat memeriksa billing secara otomatis**, tidak menjamin model akan selalu gratis, dan tidak mengubah paket Firebase. Pertahankan Spark dan periksa kembali sebelum mengganti model.
 
-## 3. Lindungi akses dengan App Check
+## 3. Lindungi akses dengan App Check Enterprise
 
 1. Siapkan domain HTTPS Vercel yang akan dipakai. Untuk tes awal, gunakan domain deployment tetap, bukan hostname preview yang berubah setiap deploy.
-2. Di Firebase Console buka **Build → App Check**, pilih Web App MyBudget, lalu **Register**.
-3. Pilih penyedia **reCAPTCHA v3**. Buat pasangan key melalui tautan Console jika belum ada, dengan domain Vercel/domain kustom yang sesuai. Pilih versi v3 berbasis skor, bukan checkbox v2 atau Enterprise.
-4. Masukkan key yang diminta **hanya di Console**. Secret key reCAPTCHA tidak masuk frontend. Yang dipasang di Vercel hanya **public site key** untuk `VITE_FIREBASE_APP_CHECK_SITE_KEY`.
-5. Kode menggunakan `ReCaptchaV3Provider`. Jika akun Console hanya menawarkan penyedia lain atau meminta billing, jangan mengaktifkannya untuk tutorial ini; pertahankan analisis lokal.
-6. Ikuti langkah environment variables dan redeploy di bawah. Lakukan satu pengujian, periksa metrik App Check untuk permintaan valid, kemudian aktifkan **Enforce** untuk **Firebase AI Logic** sebelum membagikan fitur ke pengguna lain. Lokasi tombol bisa berbeda mengikuti versi Console.
+2. Di Firebase Console buka **Build → App Check**, pilih Web App MyBudget. Jika sudah **Registered** menggunakan **Google Cloud Fraud Defense / reCAPTCHA Enterprise**, gunakan pendaftaran tersebut; tidak perlu membuat project, mengganti provider Console, atau mendaftar ulang.
+3. Buka pengaturan key Enterprise yang sudah dibuat pada Google Cloud Fraud Defense (nama lama: reCAPTCHA Enterprise). Pastikan key untuk situs web berbasis skor dan domain Vercel/domain kustom aplikasi sudah terdaftar. Gunakan hostname, tanpa `https://` atau path. Jangan memakai key v3 lama atau key checkbox v2.
+4. Salin **Site Key publik Enterprise** ke `VITE_FIREBASE_APP_CHECK_SITE_KEY` pada Vercel. Tidak perlu menambahkan secret key, private key, service account, atau Gemini API key ke frontend.
+5. Kode menggunakan `ReCaptchaEnterpriseProvider` dari `firebase/app-check` dan membaca site key dari environment variable yang sama. SDK meminta token App Check sebelum Gemini; AI yang gagal tetap memakai fallback lokal. Pengaturan ini tidak mengubah paket Spark, mengaktifkan billing, atau mengubah data Firebase produksi. Jika Console meminta aktivasi layanan berbayar/upgrade, jangan lanjutkan langkah tersebut.
+6. Ikuti langkah environment variables dan redeploy di bawah, lalu lakukan pemeriksaan token pada bagian berikut. Setelah permintaan valid terkonfirmasi, pemilik project dapat mempertimbangkan **Enforce** untuk **Firebase AI Logic** sebelum membagikan fitur ke pengguna lain. Jangan menyalakan enforcement hanya berdasarkan status Registered. Perubahan kode ini tidak mengaktifkan enforcement otomatis.
 7. Jangan menyalakan enforcement untuk Authentication/Firestore tanpa menguji alur kedua produk tersebut secara terpisah. Perubahan ini hanya menambahkan App Check pada penggunaan AI yang disetujui pengguna; tidak mengubah Security Rules Firestore atau cara startup sinkronisasi.
 8. Periksa pengaturan rate limit/kuota Firebase AI Logic yang tersedia di Console dan gunakan batas rendah untuk pengujian. **App Check harus benar-benar enforced di server**; site key dan domain saja tidak cukup melindungi API dari penyalahgunaan.
 
 Jangan memasang App Check debug token di Vercel atau source Git. Uji produksi melalui HTTPS dengan site key/domain yang benar. Bila perlu mencoba localhost, daftarkan localhost pada konfigurasi reCAPTCHA untuk pengembangan saja. Emulator sinkronisasi sengaja tidak memanggil AI.
 
+### Memeriksa token sebelum enforcement
+
+1. Buka deployment HTTPS yang sudah memakai kode Enterprise dan environment variables terbaru. Pada Chrome desktop, buka **DevTools → Network**, lalu aktifkan **Preserve log**. Jangan ubah atau hapus data lokal untuk pengujian ini.
+2. Buka **Analisis → AI Insights**, pilih pertanyaan yang belum memiliki cache, tekan **Analisis dengan AI**, lalu **Setuju dan analisis**. Hasil yang sudah tersimpan tidak memanggil layanan lagi, sehingga tidak selalu menghasilkan permintaan baru. Patuhi jeda satu menit dan batas lima percobaan per hari; tidak perlu menghabiskan kuota untuk tes.
+3. Filter Network menggunakan `firebaseappcheck.googleapis.com`. Jika SDK perlu token baru, akan muncul pertukaran `exchangeRecaptchaEnterpriseToken` yang seharusnya berhasil (HTTP 200). Respons berisi token dan masa berlaku; cukup periksa keberhasilan dan keberadaan token, **jangan menyalin, mencetak, membagikan, atau commit nilai token**. Token yang masih berlaku dapat dipakai ulang, sehingga tidak adanya pertukaran baru bukan otomatis error.
+4. Periksa permintaan AI Logic pada `firebasevertexai.googleapis.com`. **Request Headers** harus memuat `X-Firebase-AppCheck`. Kehadiran header saja belum membuktikan token valid; periksa juga respons layanan dan metrik Firebase. AI yang belum tersedia karena konfigurasi/kuota bukan bukti bahwa token gagal.
+5. Di **Firebase Console → App Check → APIs/metrics**, periksa permintaan **valid/verified** untuk AI Logic dan pastikan trafik aplikasi uji tidak ditandai invalid. Metrik dapat terlambat muncul. Status **Registered** hanya berarti provider didaftarkan, bukan bahwa deployment sudah menghasilkan token valid.
+6. Jika gagal, periksa kesesuaian Site Key Enterprise, Web App Firebase, project, hostname yang didaftarkan, scope environment Vercel, dan apakah redeploy sudah selesai. Catat kode error tanpa membagikan token atau kredensial. Jangan memperbaiki dengan membuka Security Rules Firestore, mengaktifkan debug token pada produksi, atau mengubah paket Firebase.
+
+Pemeriksaan ini dilakukan oleh pemilik deployment. Unit test memakai provider/token simulasi dan pengujian cloud memakai emulator; build sukses tidak membuktikan konfigurasi Enterprise produksi sudah lolos verifikasi.
+
 ## 4. Isi variabel di Vercel, lalu deploy ulang
 
 Merge branch perubahan ini ke branch yang dideploy. Buka **Vercel → project MyBudget → Settings → Environment Variables**. Pertahankan semua `VITE_FIREBASE_*` yang sudah dipakai login/sinkronisasi, lalu tambahkan:
 
-| Nama                                   | Nilai                                               |
-| -------------------------------------- | --------------------------------------------------- |
-| `VITE_FIREBASE_AI_ENABLED`             | `true`, setelah langkah Console selesai             |
-| `VITE_FIREBASE_AI_FREE_TIER_CONFIRMED` | `true`, setelah memeriksa Spark dan Free Tier model |
-| `VITE_FIREBASE_AI_MODEL`               | ID model yang lolos pemeriksaan langkah 2           |
-| `VITE_FIREBASE_APP_CHECK_SITE_KEY`     | Public site key reCAPTCHA v3                        |
+| Nama                                   | Nilai                                                |
+| -------------------------------------- | ---------------------------------------------------- |
+| `VITE_FIREBASE_AI_ENABLED`             | `true`, setelah langkah Console selesai              |
+| `VITE_FIREBASE_AI_FREE_TIER_CONFIRMED` | `true`, setelah memeriksa Spark dan Free Tier model  |
+| `VITE_FIREBASE_AI_MODEL`               | ID model yang lolos pemeriksaan langkah 2            |
+| `VITE_FIREBASE_APP_CHECK_SITE_KEY`     | Site Key publik reCAPTCHA Enterprise / Fraud Defense |
 
-Pilih scope **Production**. Aktifkan pada **Preview** hanya jika domain preview sudah didaftarkan dengan benar. Klik Save lalu **Deployments → Redeploy**. Vite memasukkan variabel saat build, sehingga Save tanpa redeploy belum mengubah aplikasi. Pada PWA yang sudah terpasang, terima pembaruan aplikasi dan buka ulang setelah antrean transaksi tersinkron.
+Pilih scope **Production**. Aktifkan pada **Preview** hanya jika domain preview sudah didaftarkan dengan benar pada key Enterprise. Jika variabel site key sebelumnya berisi key v3, ganti nilainya dengan Site Key Enterprise; nama variabel tetap sama. Pertahankan konfigurasi Firebase Authentication, Firestore, dan variabel AI lain yang sudah bekerja. Klik Save lalu **Deployments → Redeploy**. Vite memasukkan variabel saat build, sehingga Save tanpa redeploy belum mengubah aplikasi. Pada PWA yang sudah terpasang, terima pembaruan aplikasi dan buka ulang setelah antrean transaksi tersinkron.
 
 Untuk lokal, salin `.env.example` ke `.env.local`, isi konfigurasi di komputer sendiri, dan restart `npm run dev`. Jangan commit `.env.local`. Semua variabel `VITE_*` bersifat publik pada bundle; jangan masukkan password, private key, reCAPTCHA secret, Admin SDK credential, atau Gemini API key ke sana.
 

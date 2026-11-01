@@ -1,5 +1,5 @@
 import { getAI, getGenerativeModel, GoogleAIBackend, Schema } from 'firebase/ai'
-import { getToken, initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check'
+import { getToken, initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check'
 import { app } from '../cloud/firebase'
 import { aiConfiguration } from './config'
 import { systemInstruction } from './protocol'
@@ -10,7 +10,7 @@ export async function generateInsights(payload: string, signal: AbortSignal) {
   if (!aiConfiguration.ready) throw new Error(aiConfiguration.reason)
   // No debug token or Gemini key in frontend. No AI/App Check network until consent.
   appCheck ??= initializeAppCheck(app, {
-    provider: new ReCaptchaV3Provider(aiConfiguration.siteKey),
+    provider: new ReCaptchaEnterpriseProvider(aiConfiguration.siteKey),
     isTokenAutoRefreshEnabled: true,
   })
   await getToken(appCheck)
