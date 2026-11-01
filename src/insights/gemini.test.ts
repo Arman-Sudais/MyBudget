@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   getAI: vi.fn().mockReturnValue({}),
   getModel: vi.fn(),
   generate: vi.fn(),
+  enterpriseProvider: vi.fn(),
   configuration: {
     ready: true,
     reason: '',
@@ -17,17 +18,23 @@ vi.mock('./config', () => ({ aiConfiguration: mocks.configuration }))
 vi.mock('firebase/app-check', () => ({
   initializeAppCheck: mocks.initialize,
   getToken: mocks.token,
-  ReCaptchaV3Provider: class {},
+  ReCaptchaEnterpriseProvider: class ReCaptchaEnterpriseProvider {
+    constructor(siteKey: string) {
+      mocks.enterpriseProvider(siteKey)
+    }
+  },
 }))
 vi.mock('firebase/ai', async (importOriginal) => ({
   ...(await importOriginal<typeof import('firebase/ai')>()),
   getAI: mocks.getAI,
   getGenerativeModel: mocks.getModel,
 }))
-import { generateInsights } from './gemini'
+const generateInsights = async (payload: string, signal: AbortSignal) =>
+  (await import('./gemini')).generateInsights(payload, signal)
 
 describe('Firebase AI Logic transport', () => {
   beforeEach(() => {
+    vi.resetModules()
     vi.clearAllMocks()
     mocks.configuration.ready = true
     mocks.getModel.mockReturnValue({ generateContent: mocks.generate })
@@ -37,12 +44,31 @@ describe('Firebase AI Logic transport', () => {
     })
   })
   it('tidak melakukan panggilan saat modul diimpor atau AI nonaktif', async () => {
+    await import('./gemini')
     expect(mocks.getAI).not.toHaveBeenCalled()
     expect(mocks.initialize).not.toHaveBeenCalled()
     mocks.configuration.ready = false
     await expect(generateInsights('{}', new AbortController().signal)).rejects.toThrow()
     expect(mocks.generate).not.toHaveBeenCalled()
     expect(mocks.initialize).not.toHaveBeenCalled()
+  })
+  it('memakai Enterprise dengan site key publik konfigurasi dan menunggu token sebelum AI', async () => {
+    let resolveToken!: (value: { token: string }) => void
+    mocks.token.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveToken = resolve
+      }),
+    )
+    const task = generateInsights('{}', new AbortController().signal)
+    await vi.waitFor(() => expect(mocks.token).toHaveBeenCalledTimes(1))
+    const { ReCaptchaEnterpriseProvider } = await import('firebase/app-check')
+    expect(mocks.enterpriseProvider).toHaveBeenCalledExactlyOnceWith(mocks.configuration.siteKey)
+    expect(mocks.initialize.mock.calls[0][1].provider).toBeInstanceOf(ReCaptchaEnterpriseProvider)
+    expect(mocks.initialize.mock.calls[0][1].isTokenAutoRefreshEnabled).toBe(true)
+    expect(mocks.getAI).not.toHaveBeenCalled()
+    resolveToken({ token: 'test-token' })
+    await task
+    expect(mocks.generate).toHaveBeenCalledTimes(1)
   })
   it('App Check wajib berhasil sebelum Gemini; tidak beralih provider atau model saat gagal', async () => {
     mocks.token.mockRejectedValueOnce(new Error('app-check failed'))

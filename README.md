@@ -6,6 +6,8 @@ Untuk mengaktifkan cloud, ikuti **[Panduan Firebase berbahasa Indonesia](docs/FI
 
 **MyBudget AI Insights** tersedia pada halaman Analisis: engine keuangan lokal selalu bekerja gratis/offline, dengan prioritas temuan dari Gemini melalui Firebase AI Logic sebagai pilihan. Gemini nonaktif sampai pemilik mengonfirmasi model Gemini Developer API Free Tier yang masih didukung dan memasang App Check. Ikuti **[panduan AI Insights berbahasa Indonesia](docs/AI_INSIGHTS_ID.md)** untuk aktivasi di Firebase/Vercel, privasi, kuota, dan pengujian. Tidak ada Gemini API key di frontend atau upgrade paket otomatis.
 
+App Check menggunakan **reCAPTCHA Enterprise / Google Cloud Fraud Defense**. Isi hanya Site Key publik pada `VITE_FIREBASE_APP_CHECK_SITE_KEY` di Vercel, lalu redeploy. Panduan AI Insights juga menjelaskan pemeriksaan token dan metrik sebelum enforcement; tidak ada perubahan paket Spark atau konfigurasi produksi yang dijalankan otomatis.
+
 ## Menjalankan aplikasi
 
 Gunakan Node.js **24 LTS** dan npm. Versi dependency dikunci melalui `package-lock.json`.
