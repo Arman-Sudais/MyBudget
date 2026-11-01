@@ -4,6 +4,8 @@ Aplikasi personal budgeting untuk mahasiswa, dibangun dengan **React + TypeScrip
 
 Untuk mengaktifkan cloud, ikuti **[Panduan Firebase berbahasa Indonesia](docs/FIREBASE_SETUP_ID.md)**: membuat project, mengaktifkan Google, memasang Security Rules, mengisi environment variables Vercel, authorized domains, deployment, migrasi, dan pengujian dua perangkat. Konfigurasi web publik dicontohkan pada `.env.example`; tidak ada Admin private key di frontend.
 
+**MyBudget AI Insights** tersedia pada halaman Analisis: engine keuangan lokal selalu bekerja gratis/offline, dengan prioritas temuan dari Gemini melalui Firebase AI Logic sebagai pilihan. Gemini nonaktif sampai pemilik mengonfirmasi model Gemini Developer API Free Tier yang masih didukung dan memasang App Check. Ikuti **[panduan AI Insights berbahasa Indonesia](docs/AI_INSIGHTS_ID.md)** untuk aktivasi di Firebase/Vercel, privasi, kuota, dan pengujian. Tidak ada Gemini API key di frontend atau upgrade paket otomatis.
+
 ## Menjalankan aplikasi
 
 Gunakan Node.js **24 LTS** dan npm. Versi dependency dikunci melalui `package-lock.json`.

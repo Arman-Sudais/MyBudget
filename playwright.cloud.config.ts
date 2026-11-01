@@ -2,6 +2,7 @@ import { defineConfig, devices } from '@playwright/test'
 import { existsSync } from 'node:fs'
 export default defineConfig({
   testDir: './tests/cloud',
+  outputDir: 'test-results/cloud',
   workers: 1,
   timeout: 90000,
   use: {

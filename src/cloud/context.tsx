@@ -7,6 +7,7 @@ import { firebaseConfigured } from './config'
 import type { CloudSession, MigrationChoice, SessionState } from './session'
 import type * as FirebaseClient from './firebase'
 import { initialData } from '../lib/finance'
+import { activateInsightsWorkspace, clearInsightsCache } from '../insights/service'
 
 export interface CloudControls {
   configured: boolean
@@ -87,6 +88,7 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
           if (alive) setError(authError(e))
         })
         unsubscribe = onAuthStateChanged(client.auth, (next) => {
+          activateInsightsWorkspace(next?.uid ?? 'local')
           const token = ++generation.current
           // Hide the old workspace immediately, before async cache cleanup.
           userRef.current = next
@@ -192,6 +194,7 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
           'Masih ada perubahan tertunda. Hubungkan internet dan tunggu Synced sebelum logout, atau unduh perubahan tertunda lalu batalkan antrean dengan konfirmasi.',
         )
       setLoading(true)
+      clearInsightsCache()
       await stop(true)
       if (blockedCleanup.current) {
         await blockedCleanup.current()
